@@ -33,6 +33,8 @@ The optional [AML + TypeSafe JEV module](extras/aml/README.md) publishes the
 synchronous Add/Search API, JEV reranking bridge, budget ledger, deployment
 templates and offline HTTP acceptance tests. Submission snapshot: `v0.3.0-aml.1`.
 It leaves the default core offline and dependency-free.
+The reranking layer can be adapted to Luna, JEV or Clef with your own API keys.
+The submitted and tested default is JEV; Luna needs a separate adapter.
 
 ## Two reference implementations
 

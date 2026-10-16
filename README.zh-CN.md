@@ -28,6 +28,7 @@ LMC-5 就是围绕这个想法做的小型、离线优先 **LLM agent memory** �
 [extras/aml](extras/aml/README.md) 提供公开的同步 Add/Search 接口、TypeSafe JEV
 重排桥接、预算账本、部署模板及离线 HTTP 联测。参赛快照版本为 `v0.3.0-aml.1`，
 不改变核心默认离线、零依赖的边界。[报名说明](extras/aml/SUBMISSION.zh-CN.md)。
+重排层可按需适配 Luna、JEV、Clef；使用者自备对应 API 密钥。当前参赛默认并验证的是 JEV，Luna 需另接适配器。
 
 ## 两套参考实现
 

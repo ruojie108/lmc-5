@@ -16,6 +16,8 @@ Add 同步处理，选填的 Add 状态地址留空。
 
 LMC-5 为本团队开发的五维记忆系统，采用 X 时间线、Y 关系网、Z 事实演化、E 体验信号、M 记忆代谢的架构。设计参考与致谢见公开仓库 docs/credits.md。
 
+重排层可按需适配 Luna、JEV、Clef，使用者需自行配置对应服务的 API 密钥，项目不提供共享密钥或共享调用额度。当前参赛默认使用 JEV；仓库保留 Clef 参考后端，Luna 需另接适配器。
+
 本次参赛版本为 v0.3.0-aml.1，基于 LMC-5 0.3.0 核心，包含公开的 AML HTTP 接口、JEV 重排桥接层及预算账本。已部署同步 Add、Search 和健康检查接口，地址见表单；Add/Search 使用 Authorization: Bearer 鉴权，服务常驻并配置开机自启。
 
 考场实例使用按用户隔离的 SQLite 存储，支持相同 request_id 与请求内容的顺序重试幂等。检索采用词法与向量召回、RRF 融合及第三方 JEV 重排。向量模型为 DashScope text-embedding-v4；重排服务由 TypeSafe 提供，模型为 jev-1.13.0。JEV 最多处理 100 个候选，最终返回不超过 min(top_k, 50) 条；召回条数仍受请求 top_k 和可检索内容影响。结果按需附带同会话相邻轮次，并按时间或当前事实查询意图排序。

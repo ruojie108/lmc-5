@@ -27,6 +27,18 @@ The legacy module and its ledger are included to preserve that import contract;
 Clef is not the submitted reranker. `shell/server.py` alone is a development
 entry point and can run without auth. **Deploy through `start.sh`**.
 
+## Reranker choice and API ownership
+
+The reranking layer can be adapted to **Luna, JEV, or Clef**. Every deployment
+must supply its **own provider API credentials**. This repository contains no
+shared key, no project-funded API access, and no embedded exam-service credential.
+The current submitted/default launcher uses **JEV**. A legacy Clef/Clef-flash
+backend is included in `shell/rerank.py`; Luna requires an adapter implementing
+the same serving contract. The published acceptance tests validate JEV, not all
+three providers. Switching providers also requires the corresponding launcher
+configuration and provider-specific budget route/pricing; replacing only the
+model name is insufficient.
+
 ## Actual submitted pipeline
 
 - SQLite files are partitioned by `user_id`; synchronous Add stores message
