@@ -1,0 +1,20 @@
+[Unit]
+Description=LMC-5 AML memory API with JEV reranking
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=lmc5
+WorkingDirectory=/srv/lmc-5
+Environment=AML_STATE_DIR=/var/lib/lmc5-aml
+Environment=AML_PYTHON=/srv/lmc-5/.venv/bin/python
+ExecStart=/bin/bash /srv/lmc-5/extras/aml/start.sh
+Restart=on-failure
+RestartSec=5
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

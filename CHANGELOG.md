@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.0-aml.1 — public AML serving snapshot
+
+- Published the deployed AML Add/Search HTTP service and TypeSafe JEV bridge under `extras/aml`.
+- Included transactional rerank budgeting, explicit ledger administration, portable startup configuration, systemd template, and third-party disclosure.
+- Added synthetic loopback acceptance tests for auth, idempotency, isolation, top-50 limits, paid-receipt accounting, and fallback; no evaluation datasets or credentials are distributed.
+- Preserved deployed algorithm function/class bodies; parameterized private runtime paths and account configuration. This tag identifies the serving snapshot; it does not enable every optional core feature.
+
 ## Unreleased
 
 ### Licensing

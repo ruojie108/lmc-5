@@ -23,6 +23,12 @@ LMC-5 就是围绕这个想法做的小型、离线优先 **LLM agent memory** �
 它适合 Claude Code、Codex 风格 coding agent、个人助理 agent、本地 CLI 工作流，
 以及其他需要长期记忆但不想绑定单一模型厂商的 LLM 工具。
 
+## AML 参赛接口与 JEV 适配
+
+[extras/aml](extras/aml/README.md) 提供公开的同步 Add/Search 接口、TypeSafe JEV
+重排桥接、预算账本、部署模板及离线 HTTP 联测。参赛快照版本为 `v0.3.0-aml.1`，
+不改变核心默认离线、零依赖的边界。[报名说明](extras/aml/SUBMISSION.zh-CN.md)。
+
 ## 两套参考实现
 
 LMC-5 在同一 XYZEM 模型下提供**两套**参考实现，对应不同的部署形态：

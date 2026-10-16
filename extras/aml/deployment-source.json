@@ -1,0 +1,24 @@
+{
+  "snapshot_date": "2026-10-16",
+  "core_public_commit": "fb3e72c9ee7357c8b17311097b0750082a8a1237",
+  "core_comparison": "Every deployed src/lmc5 Python file matched this public revision byte-for-byte.",
+  "source_sha256": {
+    "shell/server.py": "0446973b545801c6322e4dfa2817a5eac83a6e629bad16ae5466b67889fddc9b",
+    "shell/rerank.py": "6fcc5d6ebba316d4106bb61418d9ae76f1d81ebf17935f003aeccd54076c6cb1",
+    "shell/rerank_ledger.py": "e5b0207caeb0933fa4953a24358c788cef29ae2f26f85fc821f6185bf39aa945",
+    "shell/serve_exam.py": "0b6d9ab608c1bd81e38e0fdd19a39e65d31a385184bc308d305390e8fb05e084",
+    "shell/exam_jev_bridge.py": "7b6f179e0247aa10e014dc0a25b6c93df64b2d59427a69c726d0dee1e3efb143",
+    "jev/rerank_jev.py": "10a3640217a9baa0ac5186aa2cb89d1ae08b14ce95440d0047556024aefd8c1d",
+    "jev/rerank_ledger_jev.py": "a847f176045472906ab92820449eb162f3b4f68d309adb361dd3696fb7bd6fb6",
+    "jev/wo2_budget_admin_jev.py": "275d34ef7d7a6e1875c8bdc7f62d02000221f9073d5e88a3f1ba2ca912ada953",
+    "run/start_shell.sh": "d2149ecbfc978762e7475def12fb941ab4380ec917789eb8bee3846a85c39be0"
+  },
+  "publication_changes": [
+    "Portable runtime paths via AML_STATE_DIR and module-relative imports.",
+    "Operator-supplied Cloudflare account identifier replaces private account constants; experimental multi-hop remains disabled.",
+    "Dedicated local credential filenames retain test/production separation.",
+    "Budget namespace changed to aml-jev-serving-v1; cap and scoring logic preserved.",
+    "Portable startup shell and sanitized historical source comments/docstrings.",
+    "No live service restart or remote edits."
+  ]
+}

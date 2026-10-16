@@ -27,6 +27,13 @@ It is meant for Claude Code, Codex-style coding agents, personal assistant
 agents, local CLI workflows, and other long-running LLM tools that need memory
 without hard-binding themselves to one model provider.
 
+## AML exam serving adapter
+
+The optional [AML + TypeSafe JEV module](extras/aml/README.md) publishes the
+synchronous Add/Search API, JEV reranking bridge, budget ledger, deployment
+templates and offline HTTP acceptance tests. Submission snapshot: `v0.3.0-aml.1`.
+It leaves the default core offline and dependency-free.
+
 ## Two reference implementations
 
 LMC-5 ships **two** reference implementations of the same XYZEM model,

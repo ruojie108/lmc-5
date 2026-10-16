@@ -1,0 +1,10 @@
+# Runtime state and local credentials are never publication artifacts.
+public.env
+*.env
+secrets/
+data/
+logs/
+run/
+*.jsonl
+*.lock
+*.sqlite*

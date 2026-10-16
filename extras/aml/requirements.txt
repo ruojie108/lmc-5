@@ -1,0 +1,4 @@
+# Optional service dependencies; the core lmc5 package stays offline and dependency-free.
+httpx>=0.27,<1
+requests>=2.32,<3
+urllib3>=2,<3
