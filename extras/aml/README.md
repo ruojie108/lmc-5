@@ -9,8 +9,10 @@ evaluation datasets, or private run logs are distributed.
 
 ## Version and source correspondence
 
-Submission version: **`v0.3.0-aml.1`** (the AML serving snapshot on the 0.3.0 core).
-This is a new submission tag, not the older `v0.2.0` release.
+Original submission snapshot: **`v0.3.0-aml.1`** (on the 0.3.0 core).
+The current branch also contains the subsequent serving recovery and evidence
+visibility repairs described below; those repairs are not in the immutable
+`v0.3.0-aml.1` tag. The original snapshot is distinct from `v0.2.0`.
 
 The serving sources were exported on 2026-10-16 from the exam deployment using
 an explicit file allowlist. `deployment-source.json` records their original
@@ -67,7 +69,7 @@ model name is insufficient.
 
 ### Limits and accounting
 
-The fixed startup profile uses a USD 10 **JEV ledger** cap, at most 16 JEV calls
+The fixed startup profile uses a USD 10 **JEV ledger** cap, at most 16 concurrent JEV calls
 per search, a default process-wide JEV limit of 16, and a fixed serving rate of 600
 candidate calls/minute (burst 4). The generic backend default remains 240; the
 serving profile sets 600 explicitly and keeps the 100-candidate pool unchanged. This is **not** a verified 16-concurrent-client
