@@ -38,7 +38,8 @@ def free_port():
 
 @pytest.fixture
 def serving(tmp_path):
-    state = {'invalid_score': False, 'calls': 0}
+    state = {'invalid_score': False, 'calls': 0, 'requests': []}
+    state_lock = threading.Lock()
 
     class Stub(BaseHTTPRequestHandler):
         def log_message(self, *_):
@@ -50,7 +51,9 @@ def serving(tmp_path):
             body = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
             assert body['model'] == 'jev-1.13.0'
             assert 'Question: ' in body['state'] and 'Memory: ' in body['state']
-            state['calls'] += 1
+            with state_lock:
+                state['calls'] += 1
+                state['requests'].append(body['state'])
             payload = json.dumps({'model': 'jev-1.13.0',
                                   'answers': {'rel': {'score': 'invalid' if state['invalid_score'] else 2.5}},
                                   'usage': {'input_tokens': 20}}).encode()
@@ -164,7 +167,11 @@ def test_bad_provider_score_falls_back_without_retry(serving):
     state['invalid_score'] = True
     code, headers, result = request('/v1/memories/search', {'user_id': 'alice', 'query': 'orbit', 'top_k': 100})
     assert code == 200 and headers['X-AML-Rerank'].startswith('fallback')
-    assert len(result['data']) == 3 and state['calls'] == 3
+    assert len(result['data']) == 3
+    # A bad receipt can cancel other candidates before they send. No candidate
+    # may be resent; do not require all three to send before the abort wins.
+    assert 1 <= state['calls'] <= 3
+    assert len(set(state['requests'])) == state['calls']
     assert all(x['score'] < 1 for x in result['data'])
 
 
