@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased — AML serving repair
+
+- Scan all matching SQLite vectors with a bounded top-K heap, hydrating only
+  winners; preserve rounded scores and stable ties from the original full sort.
+- Remove the JEV billing ledger, budget/price estimates, financial startup
+  checks and persistent stop/recovery gates. Optional usage cannot block scores.
+- Preserve RRF fallback, no automatic replay, deadlines, concurrency, provider
+  Retry-After and finite circuit cooldowns. Update standalone startup and tests.
+- Keep `v0.3.0-aml.1` and the original deployment manifest as historical snapshots.
+  Publishing this source does not change the running competition service.
+
+
 ## 0.3.0-aml.1 — public AML serving snapshot
 
 - Published the deployed AML Add/Search HTTP service and TypeSafe JEV bridge under `extras/aml`.

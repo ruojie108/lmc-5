@@ -1,16 +1,7 @@
-"""Serving JEV bridge for the exam endpoint (2026-10-16, her 14:51 ruling: the exam reranker is Jev).
+"""JEV serving bridge: score up to 100 candidates, return min(top_k, 50).
 
-Modeled on J50's offline JevBridge (round3/guchen_lmc5_test_20261009/jev_bridge.py) with two
-deliberate serving-semantics changes, both to keep the exam endpoint ALIVE:
-- the bridge itself never halts the HTTP service: a failed rerank returns RRF fallback.
-  Backend accounting stops remain authoritative; only explicit transient HTTP responses may
-  undergo the bounded keep-and-recover policy before a subsequent search. No receipt cache
-  or retry replays the failed call; every new send still reserves against the durable ledger.
-- no cross-request result cache: every Search reranks live (the offline digest cache could serve a
-  stale ordering after the store changes under the same query).
-
-The backend (rerank_jev) must be configured MODE=jev RETURN_N=100: the bridge hands it the full
-100-candidate pool and cuts the output to min(top_k, 50) in every path, success or fallback.
+Failed/incomplete reranks restore the original RRF ordering for that search.
+There is no billing ledger, persistent stop, replay or cross-request result cache.
 """
 import sys
 import time
@@ -35,13 +26,7 @@ class ExamJevBridge:
         n = min(int(top_k), self.RETURN_N)
         rrf_order = [(c[0], c[1]) for c in cands]  # the guaranteed fallback ordering, fixed up front
         try:
-            recovery = None
-            if hasattr(self.backend, "recover_serving_transient"):
-                recovery = self.backend.recover_serving_transient(query, cands)
             pairs, meta = self.backend.apply(query, cands, 100)
-            if recovery and recovery.get("reason") not in ("disabled", "no_stop"):
-                meta["recovery"] = recovery
-                self._log({"op": "jev_serving_recovery", **recovery})
             if meta.get("mode") == "fallback":
                 # do not trust the backend's fallback pairs: restore the RRF order explicitly, and log
                 self._log({"op": "jev_serving_fallback", "reason": str(meta.get("reason"))[:120],

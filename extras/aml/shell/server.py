@@ -822,12 +822,12 @@ def do_search(body: dict) -> tuple[int, dict]:
     if ab_stats is not None:
         ev["abstain"] = ab_stats  # gate decision, top1 score and counts only
     if rr_meta is not None:
-        ev["rerank"] = rr_meta  # metadata only: mode, reason code, counts, seconds, USD estimate
+        ev["rerank"] = rr_meta  # metadata only: mode, reason code, counts, seconds
         if rerank.MODE != "off":
             st = rerank.stats_snapshot()
             ev["rerank_cum"] = {k: st[k] for k in ("searches", "reranked", "fallback", "fallback_reasons",
                                                    "calls_sent", "calls_unknown", "http_429", "valid_candidates",
-                                                   "queue_wait_s", "est_usd_settled", "budget", "breaker_open")}
+                                                   "queue_wait_s", "breaker_open")}
     log(ev)
     return 200, {"data": data}
 
@@ -845,7 +845,7 @@ class Handler(BaseHTTPRequestHandler):
         if meta is not None:
             _tls.rerank_meta = None
             hdr = meta.get("mode", "?") + ("; reason=" + meta["reason"] if meta.get("reason") else "")
-            if rerank.MODE != "off" and rerank.stats_snapshot()["budget"].get("stopped"):
+            if rerank.MODE != "off" and rerank.stats_snapshot().get("budget", {}).get("stopped"):
                 hdr += "; budget=stopped"
             self.send_header("X-AML-Rerank", hdr)
         self.send_header("Content-Type", "application/json")

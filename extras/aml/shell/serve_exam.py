@@ -1,20 +1,8 @@
 #!/usr/bin/env python3
-"""Exam serving launcher (2026-10-16): shell/server.py + live JEV rerank.
+"""Start the AML JEV profile; no pricing, billing ledger or budget initialization.
 
-Import order is load-bearing: AML_RERANK_POOL is read by server.py AT IMPORT, and server.py imports
-the clef rerank module which hard-rejects AML_RERANK=jev — so the controlled env is fixed FIRST,
-server imports with the rerank mode unset, then the jev env completes, rerank_jev loads (validating
-ledger/key-path/limits), and the bridge replaces server.rerank before serve_forever.
-
-Production env contract (exam profile):
-- controlled parameters (budget, per-search concurrency, pool width, ledger path, budget id, key
-  path) are FORCED to fixed values; an inherited value for any of them, or any test-harness
-  variable, refuses startup (fail-closed) — changing the budget means editing THIS file.
-- EXAM_ALLOW_TEST_HARNESS=1 (rehearsal only, never written by the production start path) flips the
-  controlled parameters to setdefault so a test harness may override them.
-
-RUN_ID is generated fresh per process start (ledger runs.run_id is a primary key; reuse would
-refuse startup after a crash-restart — unique-run invariant).
+Import server with the legacy reranker off, then install the JEV bridge.
+The synthetic loopback harness is opt-in; public start.sh strips harness values.
 """
 import datetime
 import os
@@ -32,16 +20,12 @@ for k in ("AML_RERANK", "AML_RETURN_N"):
     os.environ.pop(k, None)
 
 _CONTROLLED = {
-    "AML_RERANK_BUDGET_USD": "10",
     "AML_RERANK_PER_SEARCH": "16",
     "AML_RERANK_RPM": "600",
-    "AML_RERANK_TRANSIENT_RECOVERY": "1",
     "AML_RERANK_POOL": "100",
-    "AML_RERANK_LEDGER": str(STATE_DIR / "data/ledger/rerank_exam_jev.sqlite"),
-    "AML_RERANK_BUDGET_ID": "aml-jev-serving-v1",
     "AML_JEV_KEY_PATH": str(STATE_DIR / "secrets/.typesafe_key_aml"),
 }
-_FORBIDDEN = ("AML_RERANK_TEST_URL", "AML_RERANK_RUN_ID", "EXAM_JEV_BUDGET_USD")
+_FORBIDDEN = ("AML_RERANK_TEST_URL", "AML_RERANK_RUN_ID")
 
 _HARNESS = os.environ.get("EXAM_ALLOW_TEST_HARNESS") == "1"
 if _HARNESS:
@@ -62,7 +46,7 @@ import server  # noqa: E402  (reads AML_RERANK_POOL now; clef rerank loads MODE=
 run_id = "exam-%s-%s" % (datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d%H%M%S"),
                          secrets.token_hex(16))
 os.environ.update(AML_RERANK="jev", AML_RETURN_N="100", AML_RERANK_RUN_ID=run_id)
-import rerank_jev  # noqa: E402  (validates ledger/config at import; credential is read on the first search)
+import rerank_jev  # noqa: E402  (validates config; credential is read on the first search)
 from exam_jev_bridge import ExamJevBridge  # noqa: E402
 
 server.rerank = ExamJevBridge(rerank_jev)

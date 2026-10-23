@@ -1732,6 +1732,131 @@ class MemoryStore(AbstractContextManager["MemoryStore"]):
         limit: int = 10,
         redact: bool = True,
     ) -> list[dict[str, Any]]:
+        """Brute-force cosine search with a bounded top-`limit` heap.
+
+        Output is identical to `_search_vectors_full` (the original
+        fetchall + full sort): same SQL (so the same row order), ranking on the
+        6-decimal rounded score, ties kept in SQL row order (list.sort is
+        stable, also with reverse=True). Only the selected rows are turned
+        into dicts and joined to their memory/event record, so memory is
+        O(limit) instead of O(rows). Owner existence is still checked for
+        every row so a dangling vector raises the same KeyError as before.
+        Unusual inputs (limit <= 0 / non-int, NaN scores) fall back to the
+        original implementation.
+        """
+        import heapq
+        import math
+
+        if not isinstance(limit, int) or limit <= 0:
+            return self._search_vectors_full(
+                query_vector=query_vector,
+                provider=provider,
+                model=model,
+                owner_type=owner_type,
+                input_type=input_type,
+                limit=limit,
+                redact=redact,
+            )
+        query = vector_from_json(vector_to_json(query_vector))
+        dimension = len(query)
+        clauses = [
+            "provider = ?",
+            "model = ?",
+            "dimension = ?",
+            "input_type = ?",
+        ]
+        params: list[object] = [provider, model, dimension, input_type]
+        if owner_type:
+            validate_choice("owner_type", owner_type, VECTOR_OWNER_TYPES)
+            clauses.append("owner_type = ?")
+            params.append(owner_type)
+
+        vector_fields = (
+            "id",
+            "owner_type",
+            "owner_id",
+            "provider",
+            "model",
+            "dimension",
+            "input_type",
+            "vector_hash",
+            "content_hash",
+            "created_at",
+        )
+        conn = self.conn
+        # heap entries: (rounded_score, -position, fields); position is unique,
+        # so `fields` is never compared. heap[0] is the current worst kept hit.
+        heap: list[tuple[float, int, dict[str, Any]]] = []
+        nan_seen = False
+        cursor = conn.execute(
+            f"SELECT * FROM vectors WHERE {' AND '.join(clauses)}",
+            params,
+        )
+        try:
+            for position, row in enumerate(cursor):
+                score = cosine_similarity(query, vector_from_json(row["vector_json"]))
+                if row["owner_type"] == "memory":
+                    exists = conn.execute(
+                        "SELECT 1 FROM memories WHERE id = ?", (row["owner_id"],)
+                    ).fetchone()
+                    if exists is None:
+                        raise KeyError(f"memory not found: {row['owner_id']}")
+                else:
+                    exists = conn.execute(
+                        "SELECT 1 FROM events WHERE id = ?", (row["owner_id"],)
+                    ).fetchone()
+                    if exists is None:
+                        raise KeyError(f"event not found: {row['owner_id']}")
+                rounded = round(score, 6)
+                if math.isnan(rounded):
+                    nan_seen = True
+                    break
+                key = (rounded, -position)
+                if len(heap) < limit:
+                    heapq.heappush(heap, (rounded, -position, {k: row[k] for k in vector_fields}))
+                elif key > heap[0][:2]:
+                    heapq.heapreplace(heap, (rounded, -position, {k: row[k] for k in vector_fields}))
+        finally:
+            cursor.close()
+        if nan_seen:
+            return self._search_vectors_full(
+                query_vector=query_vector,
+                provider=provider,
+                model=model,
+                owner_type=owner_type,
+                input_type=input_type,
+                limit=limit,
+                redact=redact,
+            )
+
+        heap.sort(key=lambda entry: (entry[0], entry[1]), reverse=True)
+        selected = []
+        for rounded, _neg_position, fields in heap:
+            vector_record = _row_to_vector(fields)  # type: ignore[arg-type]
+            item = vector_record.to_public_dict()
+            item["score"] = rounded
+            if vector_record.owner_type == "memory":
+                item["record"] = self.get_memory(vector_record.owner_id).to_public_dict()
+            else:
+                item["record"] = self.get_event(vector_record.owner_id).to_public_dict()
+            selected.append(item)
+        if redact:
+            return [redact_obj(item) for item in selected]
+        return selected
+
+    def _search_vectors_full(
+        self,
+        *,
+        query_vector: list[float],
+        provider: str,
+        model: str,
+        owner_type: str | None = None,
+        input_type: str = "document",
+        limit: int = 10,
+        redact: bool = True,
+    ) -> list[dict[str, Any]]:
+        # Original (pre-2026-10-23) implementation, kept verbatim as the
+        # reference and as the fallback for unusual inputs.
         query = vector_from_json(vector_to_json(query_vector))
         dimension = len(query)
         clauses = [

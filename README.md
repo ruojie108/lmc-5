@@ -30,9 +30,11 @@ without hard-binding themselves to one model provider.
 ## AML exam serving adapter
 
 The optional [AML + TypeSafe JEV module](extras/aml/README.md) publishes the
-synchronous Add/Search API, JEV reranking bridge, budget ledger, deployment
+synchronous Add/Search API, JEV reranking bridge, deployment
 templates and offline HTTP acceptance tests. Submission snapshot: `v0.3.0-aml.1`.
-It leaves the default core offline and dependency-free.
+Current source adds streaming top-K vector selection and removes JEV billing
+ledger dependencies; the original tag remains unchanged. The default core stays
+offline and dependency-free.
 The reranking layer can be adapted to Luna, JEV or Clef with your own API keys.
 The submitted and tested default is JEV; Luna needs a separate adapter.
 
