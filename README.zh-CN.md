@@ -25,6 +25,9 @@ LMC-5 就是围绕这个想法做的小型、离线优先 **LLM agent memory** �
 
 ## AML 参赛接口与 JEV 适配
 
+本参赛分支 `fix/aml-serving-recovery` 独立维护，与 `main` 上的完整 LMC-5
+系统分开。不要将本分支合并进完整版；参赛修复与后续发布沿独立维护线进行。
+
 [extras/aml](extras/aml/README.md) 提供公开的同步 Add/Search 接口、TypeSafe JEV
 重排桥接、部署模板及离线 HTTP 联测。参赛快照版本为 `v0.3.0-aml.1`，
 当前源码已补入流式 top-K 向量筛选并移除 JEV 计费账本；原始标签保持不变。

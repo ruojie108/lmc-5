@@ -9,6 +9,10 @@ evaluation datasets, or private run logs are distributed.
 
 ## Version and source correspondence
 
+Maintenance line: **`fix/aml-serving-recovery`**, independent of the full LMC-5
+system on `main`. This competition branch is not a merge candidate for the
+full-system branch. Keep competition fixes and releases on this maintenance line.
+
 Original submission snapshot: **`v0.3.0-aml.1`** (on the 0.3.0 core).
 The current branch adds streaming top-K vector retrieval, removes JEV billing
 accounting and persistent stops, and includes the evidence visibility repair.

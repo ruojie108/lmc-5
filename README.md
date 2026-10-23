@@ -29,6 +29,10 @@ without hard-binding themselves to one model provider.
 
 ## AML exam serving adapter
 
+This competition branch (`fix/aml-serving-recovery`) is maintained independently
+of the full LMC-5 system on `main`. Do not merge this branch into the full-system
+branch. Competition fixes and releases stay on this separate maintenance line.
+
 The optional [AML + TypeSafe JEV module](extras/aml/README.md) publishes the
 synchronous Add/Search API, JEV reranking bridge, deployment
 templates and offline HTTP acceptance tests. Submission snapshot: `v0.3.0-aml.1`.
