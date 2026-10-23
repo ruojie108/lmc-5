@@ -28,21 +28,19 @@ The public package changes module discovery, runtime/credential paths and
 account-specific configuration; the startup shell is portable. It does not
 silently replace or restart the live exam service.
 
-The service imports the legacy `shell/rerank.py` in **off** mode, then
-`serve_exam.py` installs `ExamJevBridge(rerank_jev)` before accepting requests.
-The legacy module and its ledger are included to preserve that import contract;
-Clef is not the submitted reranker. `shell/server.py` alone is a development
-entry point and can run without auth. **Deploy through `start.sh`**.
+`serve_exam.py` sets the competition configuration before `server.py` loads the
+JEV bridge directly. There is no legacy reranker or billing module in this
+startup path. `shell/server.py` alone is a development entry point and can run
+without auth. **Deploy through `start.sh`**.
 
 ## Reranker choice and API ownership
 
 The reranking layer can be adapted to **Luna, JEV, or Clef**. Every deployment
 must supply its **own provider API credentials**. This repository contains no
 shared key, no project-funded API access, and no embedded exam-service credential.
-The current submitted/default launcher uses **JEV**. A legacy Clef/Clef-flash
-backend is included in `shell/rerank.py`; Luna requires an adapter implementing
-the same serving contract. The published acceptance tests validate JEV, not all
-three providers. Switching providers also requires the corresponding launcher
+This competition branch ships **JEV**. Luna and Clef require an adapter
+implementing the same serving contract; the unused legacy Clef implementation
+has been removed from this branch. The acceptance tests validate JEV. Switching providers also requires the corresponding launcher
 configuration and request/response adapter; replacing only the model name is
 insufficient.
 
@@ -87,12 +85,10 @@ backend default remains 240. This is not a verified HTTP client-concurrency
 capacity claim. The request body limit is 8,000,000 bytes. A process lock avoids
 starting two serving processes against the same state directory.
 
-JEV requires **no local billing ledger, budget grant, pricing constant or
-financial audit**. Retired `AML_RERANK_BUDGET_*`, `AML_RERANK_LEDGER` and recovery
-settings have no effect on this backend. Existing ledger/anomaly files are not
-read, migrated or deleted. Provider-reported token counts are optional process
-diagnostics, never converted to dollars or used to accept/reject a valid score.
-Use the provider account for actual billing and spending controls.
+The billing modules, price estimates, budget gates and recovery machinery have
+been deleted. There is no replacement accounting component or compatibility
+layer. Provider-reported token counts are optional diagnostics; actual billing
+and spending controls belong to the provider account.
 
 A failed, invalid or uncertain call falls back to RRF for that search. It does
 not create a sticky stop for other searches or future process starts. Missing
@@ -144,7 +140,7 @@ Edit that private environment file and supply:
    `AML_BIND=0.0.0.0` only for an intentional public listener; use a TLS proxy
    when deploying HTTPS. The port number alone does not enable TLS.
 
-Start the service directly; no ledger initialization is needed:
+Start the service:
 
 ```bash
 bash extras/aml/start.sh
@@ -153,7 +149,6 @@ bash extras/aml/start.sh
 Starting the service generates a fresh diagnostic run id. The fixed candidate
 pool and concurrency profile is in `shell/serve_exam.py`; `start.sh` clears its
 listed controlled/harness variables before and after loading the environment.
-No budget variable needs to be set or overridden.
 
 `aml.service.example` shows a systemd setup. Adjust the service user, checkout,
 virtualenv and state paths, ensure that user owns the state directory, install

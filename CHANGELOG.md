@@ -1,9 +1,10 @@
 # Changelog
 
-## Unreleased — AML serving repair
+## Unreleased — AML competition branch
 
 - Scan all matching SQLite vectors with a bounded top-K heap, hydrating only
   winners; preserve rounded scores and stable ties from the original full sort.
+- Delete the unused legacy Clef backend and ledger; load JEV directly.
 - Remove the JEV billing ledger, budget/price estimates, financial startup
   checks and persistent stop/recovery gates. Optional usage cannot block scores.
 - Preserve RRF fallback, no automatic replay, deadlines, concurrency, provider

@@ -78,13 +78,11 @@ def serving(tmp_path):
     stub = ThreadingHTTPServer(('127.0.0.1', 0), Stub)
     threading.Thread(target=stub.serve_forever, daemon=True).start()
     env = clean_env(tmp_path)
-    ledger = tmp_path / 'ledger.sqlite'
     key = tmp_path / 'stub-key'
     key.write_text('stub-not-a-real-token')
     port = free_port()
     env.update(EXAM_ALLOW_TEST_HARNESS='1', AML_RERANK_TEST_URL=f'http://127.0.0.1:{stub.server_port}/run',
-               AML_RERANK_LEDGER=str(ledger), AML_RERANK_BUDGET_ID='offline-test',
-               AML_RERANK_BUDGET_USD='not-a-budget', AML_JEV_KEY_PATH=str(key), AML_API_KEY=AUTH,
+               AML_JEV_KEY_PATH=str(key), AML_API_KEY=AUTH,
                AML_NO_EMBED='1', AML_TRIAL_PORT=str(port), AML_BIND='127.0.0.1',
                AML_RERANK_RPM='100000', AML_RERANK_BURST='200', AML_RERANK_DEADLINE_SEC='0.5',
                AML_RERANK_BREAKER_COOLDOWN='0.1')
@@ -117,7 +115,7 @@ def serving(tmp_path):
                 time.sleep(.05)
         else:
             pytest.fail('service did not start')
-        yield request, state, env, ledger
+        yield request, state, env
     finally:
         proc.terminate()
         try:
@@ -136,7 +134,7 @@ def add_body(count=3):
 
 
 def test_auth_health_and_user_isolation(serving):
-    request, state, _, _ = serving
+    request, state, _ = serving
     code, _, health = request('/health', auth=False)
     assert code == 200 and health['rerank']['mode'] == 'jev'
     assert health['rerank']['test_mode'] is True
@@ -158,7 +156,7 @@ def test_auth_health_and_user_isolation(serving):
 
 
 def test_return_cap_and_optional_usage_without_ledger(serving):
-    request, state, env, ledger = serving
+    request, state, env = serving
     assert request('/v1/memories/add', add_body(55))[0] == 200
     code, headers, result = request('/v1/memories/search', {'user_id': 'alice', 'query': 'orbit', 'top_k': 100})
     assert code == 200 and headers['X-AML-Rerank'] == 'rerank'
@@ -168,11 +166,10 @@ def test_return_cap_and_optional_usage_without_ledger(serving):
     assert stats['calls_ok'] == 55 and stats['calls_unknown'] == 0
     assert stats['input_tokens_reported'] == 55 * 20
     assert 'budget' not in stats and 'est_usd_settled' not in stats
-    assert not ledger.exists()
 
 
 def test_bad_provider_score_falls_back_without_retry(serving):
-    request, state, _, _ = serving
+    request, state, _ = serving
     assert request('/v1/memories/add', add_body())[0] == 200
     state['invalid_score'] = True
     code, headers, result = request('/v1/memories/search', {'user_id': 'alice', 'query': 'orbit', 'top_k': 100})
@@ -190,17 +187,17 @@ def test_production_launcher_refuses_missing_auth(tmp_path):
     assert result.returncode != 0 and 'AML_API_KEY missing/too short' in result.stderr
 
 
-def test_production_import_ignores_retired_budget_config(tmp_path):
+def test_production_import_has_no_billing_modules(tmp_path):
     env = clean_env(tmp_path)
-    ledger = tmp_path / 'old-ledger.sqlite'
-    ledger.write_bytes(b'old data is left alone, even if corrupt')
-    env.update(AML_API_KEY=AUTH, AML_RERANK_BUDGET_USD='0', AML_RERANK_LEDGER=str(ledger),
-               AML_RERANK_BUDGET_ID='obsolete')
-    code = f"import runpy; m = runpy.run_path({str(MODULE / 'shell/serve_exam.py')!r}); print(m['server'].rerank.stats_snapshot())"
+    env['AML_API_KEY'] = AUTH
+    code = (
+        f"import runpy, sys; m = runpy.run_path({str(MODULE / 'shell/serve_exam.py')!r}); "
+        "assert not any('ledger' in name or name == 'rerank' for name in sys.modules); "
+        "assert m['server'].rerank.MODE == 'jev'"
+    )
     result = invoke(['-c', code], env)
     assert result.returncode == 0, result.stderr
-    assert "'budget':" not in result.stdout
-    assert ledger.read_bytes() == b'old data is left alone, even if corrupt'
+    assert not list(Path(env['AML_STATE_DIR']).rglob('*ledger*'))
 
 
 @pytest.mark.parametrize('mode', ['fallback', 'error', 'unexpected'])
@@ -233,9 +230,8 @@ def test_public_startup_clears_harness_and_restarts_with_fresh_run(tmp_path):
     port = free_port()
     (state / 'run/public.env').write_text(
         f'AML_API_KEY={AUTH}\nAML_NO_EMBED=1\nAML_TRIAL_PORT={port}\n'
-        'EXAM_ALLOW_TEST_HARNESS=1\nAML_RERANK_TEST_URL=http://127.0.0.1:1/run\n'
-        'AML_RERANK_BUDGET_USD=20\n')
-    env.update(AML_PYTHON=sys.executable, EXAM_ALLOW_TEST_HARNESS='1', AML_RERANK_BUDGET_USD='20')
+        'EXAM_ALLOW_TEST_HARNESS=1\nAML_RERANK_TEST_URL=http://127.0.0.1:1/run\n')
+    env.update(AML_PYTHON=sys.executable, EXAM_ALLOW_TEST_HARNESS='1')
     opener = build_opener(ProxyHandler({}))
     runs = []
     for _ in range(2):
@@ -274,7 +270,7 @@ def test_public_startup_clears_harness_and_restarts_with_fresh_run(tmp_path):
 
 @pytest.mark.parametrize('status', [401, 403, 503, 529])
 def test_failed_call_does_not_latch_stop_or_replay(serving, status):
-    request, state, _, ledger = serving
+    request, state, _ = serving
     assert request('/v1/memories/add', add_body(1))[0] == 200
     state['http_status'] = status
     code, headers, result = request('/v1/memories/search', {'user_id': 'alice', 'query': 'orbit', 'top_k': 100})
@@ -284,24 +280,23 @@ def test_failed_call_does_not_latch_stop_or_replay(serving, status):
     code, headers, _ = request('/v1/memories/search', {'user_id': 'alice', 'query': 'orbit followup', 'top_k': 100})
     assert code == 200 and headers['X-AML-Rerank'] == 'rerank'
     assert state['calls'] == 2
-    assert not ledger.exists()
 
 
 @pytest.mark.parametrize('usage', [None, {}, {'input_tokens': -1}, {'input_tokens': True},
                                   {'input_tokens': '20'}, {'input_tokens': 10**12}])
 def test_usage_never_blocks_valid_scores(serving, usage):
-    request, state, _, ledger = serving
+    request, state, _ = serving
     request('/v1/memories/add', add_body(1))
     state['usage'] = usage
     for _ in range(2):
         code, headers, result = request('/v1/memories/search', {'user_id': 'alice', 'query': 'orbit', 'top_k': 100})
         assert code == 200 and headers['X-AML-Rerank'] == 'rerank'
         assert result['data'][0]['score'] == 2.5
-    assert state['calls'] == 2 and not ledger.exists()
+    assert state['calls'] == 2
 
 
 def test_retry_after_is_honored_without_a_persistent_stop(serving):
-    request, state, _, _ = serving
+    request, state, _ = serving
     request('/v1/memories/add', add_body(1))
     state.update(http_status=429, retry_after='1')
     body = {'user_id': 'alice', 'query': 'orbit', 'top_k': 100}
@@ -315,7 +310,7 @@ def test_retry_after_is_honored_without_a_persistent_stop(serving):
 
 
 def test_search_deadline_returns_fallback_and_later_search_works(serving):
-    request, state, _, _ = serving
+    request, state, _ = serving
     request('/v1/memories/add', add_body(1))
     state['delay'] = 1
     body = {'user_id': 'alice', 'query': 'orbit', 'top_k': 100}
@@ -330,7 +325,7 @@ def test_search_deadline_returns_fallback_and_later_search_works(serving):
 
 
 def test_connection_loss_does_not_stop_next_search(serving):
-    request, state, _, ledger = serving
+    request, state, _ = serving
     request('/v1/memories/add', add_body(1))
     body = {'user_id': 'alice', 'query': 'orbit', 'top_k': 100}
     state['drop_response'] = True
@@ -338,5 +333,5 @@ def test_connection_loss_does_not_stop_next_search(serving):
     assert state['calls'] == 1
     state['drop_response'] = False
     assert request('/v1/memories/search', body)[1]['X-AML-Rerank'] == 'rerank'
-    assert state['calls'] == 2 and not ledger.exists()
+    assert state['calls'] == 2
     assert request('/health')[2]['rerank']['calls_unknown'] == 1

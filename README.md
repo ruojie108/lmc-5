@@ -40,7 +40,7 @@ Current source adds streaming top-K vector selection and removes JEV billing
 ledger dependencies; the original tag remains unchanged. The default core stays
 offline and dependency-free.
 The reranking layer can be adapted to Luna, JEV or Clef with your own API keys.
-The submitted and tested default is JEV; Luna needs a separate adapter.
+This competition branch ships and tests JEV; Luna and Clef need separate adapters.
 
 ## Two reference implementations
 

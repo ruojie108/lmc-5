@@ -11,7 +11,7 @@ Write path: lmc5.MemoryStore.add_memory (raw text, FTS + entity index)
 Search path: lmc5.MemoryStore.recall (FTS/LIKE + entity + relation channels)
              + optional search_vectors; channels fused with RRF k=60, the same
              default fusion LMC-5 uses in extras/pgvector_backend/recall_pipeline.py.
-No LLM is called on Add or Search.
+Add does not call a language model; Search optionally uses the configured JEV reranker.
 
 Secrets are read from environment only and never logged.
 """
@@ -30,11 +30,16 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from aml_paths import STATE_DIR, SECRETS_DIR, PAID_INSTANCE_LOCK
+from aml_paths import STATE_DIR, SECRETS_DIR
 
 from lmc5 import MemoryStore
 
-import rerank  # work order 2; AML_RERANK=off and no AML_RETURN_N -> untouched path
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "jev"))
+import rerank_jev as rerank
+from exam_jev_bridge import ExamJevBridge
+
+if rerank.MODE == "jev":
+    rerank = ExamJevBridge(rerank)
 
 ROOT = Path(os.environ.get("AML_TRIAL_DATA", str(STATE_DIR / "data/instance")))
 DB_DIR = ROOT / "db"
@@ -845,8 +850,6 @@ class Handler(BaseHTTPRequestHandler):
         if meta is not None:
             _tls.rerank_meta = None
             hdr = meta.get("mode", "?") + ("; reason=" + meta["reason"] if meta.get("reason") else "")
-            if rerank.MODE != "off" and rerank.stats_snapshot().get("budget", {}).get("stopped"):
-                hdr += "; budget=stopped"
             self.send_header("X-AML-Rerank", hdr)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(raw)))

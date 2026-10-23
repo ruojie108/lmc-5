@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
-"""Start the AML JEV profile; no pricing, billing ledger or budget initialization.
-
-Import server with the legacy reranker off, then install the JEV bridge.
+"""Configure the AML JEV profile before importing the HTTP server.
 The synthetic loopback harness is opt-in; public start.sh strips harness values.
 """
 import datetime
@@ -41,15 +39,10 @@ else:
                          "exam endpoint never runs without auth")
     os.environ.update(_CONTROLLED)
 
-import server  # noqa: E402  (reads AML_RERANK_POOL now; clef rerank loads MODE=off; replaced below)
-
 run_id = "exam-%s-%s" % (datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d%H%M%S"),
                          secrets.token_hex(16))
 os.environ.update(AML_RERANK="jev", AML_RETURN_N="100", AML_RERANK_RUN_ID=run_id)
-import rerank_jev  # noqa: E402  (validates config; credential is read on the first search)
-from exam_jev_bridge import ExamJevBridge  # noqa: E402
-
-server.rerank = ExamJevBridge(rerank_jev)
+import server  # noqa: E402  (loads the configured JEV bridge directly)
 
 if __name__ == "__main__":
     server.main()
